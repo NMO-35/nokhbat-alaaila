@@ -6,6 +6,8 @@
 <title>نظام إدارة مخزون السوبرماركت</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- مكتبة JsBarcode لتوليد الباركود -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <style>
   :root{
     --navy:#10233F;
@@ -118,35 +120,38 @@
     flex-shrink:0;
   }
 
-  /* ===== Stat cards (price-tag style) ===== */
+  /* ===== Stat cards ===== */
   .stats{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:14px;
-    margin-bottom:20px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:16px;
   }
   .stat-card{
+    flex: 1 1 130px;
     position:relative;
     background:var(--card);
     border:1px solid var(--line);
+    border-top: 4px solid var(--tag-color, var(--gold));
     border-radius:12px;
-    padding:16px 18px 16px 16px;
+    padding:12px 10px;
     box-shadow:var(--shadow);
-    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    min-height:100px;
   }
-  .stat-card::before{
-    content:"";
-    position:absolute; inset-inline-start:0; top:0; bottom:0; width:5px;
-    background: var(--tag-color, var(--gold));
-  }
-  .stat-card .stat-label{ font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-bottom:6px; }
-  .stat-card .stat-value{ font-family:'Tajawal',sans-serif; font-size:26px; font-weight:800; color:var(--ink); }
-  .stat-card .stat-note{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
+  .stat-card .stat-label{ font-size:11.5px; color:var(--ink-soft); font-weight:700; margin-bottom:6px; line-height:1.2; }
+  .stat-card .stat-value{ font-family:'Tajawal',sans-serif; font-size:22px; font-weight:800; color:var(--ink); margin-bottom:2px; line-height:1;}
+  .stat-card .stat-note{ font-size:10px; color:var(--ink-soft); display:flex; align-items:center; gap:4px;}
   .stat-card.tag-total{ --tag-color:#2C4A73; }
   .stat-card.tag-value{ --tag-color:var(--gold); }
   .stat-card.tag-low{ --tag-color:var(--warn); }
   .stat-card.tag-out{ --tag-color:var(--danger); }
-  .stat-card.tag-low .stat-value, .stat-card.tag-out .stat-value{ color:var(--tag-color); }
+  .stat-card.tag-exp{ --tag-color:#D97706; }
+  .stat-card.tag-low .stat-value, .stat-card.tag-out .stat-value, .stat-card.tag-exp .stat-value{ color:var(--tag-color); }
 
   /* ===== Toolbar ===== */
   .toolbar{
@@ -206,7 +211,7 @@
     overflow:hidden;
   }
   .table-scroll{ overflow-x:auto; }
-  table{ width:100%; border-collapse:collapse; min-width:820px; }
+  table{ width:100%; border-collapse:collapse; min-width:1000px; }
   thead th{
     background:var(--navy);
     color:#E9EDF3;
@@ -229,7 +234,7 @@
   tbody tr.row-low:hover{ background:#F7ECD3; }
   tbody tr.row-out{ background:var(--danger-bg); }
   tbody tr.row-out:hover{ background:#F7DEDB; }
-  .item-name{ font-weight:700; color:var(--ink); }
+  .item-name{ font-weight:700; color:var(--ink); display:block;}
   .item-sku{
     font-family:'Tajawal', sans-serif;
     letter-spacing:1.5px;
@@ -266,17 +271,30 @@
   .status-badge{
     display:inline-flex; align-items:center; gap:5px;
     font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px;
+    margin-bottom:4px;
   }
   .status-ok{ background:var(--ok-bg); color:var(--ok); }
   .status-low{ background:var(--warn-bg); color:var(--warn); }
   .status-out{ background:var(--danger-bg); color:var(--danger); }
+  .status-exp{ background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger);}
+  .status-exp-soon{ background:var(--warn-bg); color:#D97706; border:1px solid #D97706;}
   .row-actions{ display:flex; gap:6px; justify-content:center; }
-  .price-cell{ font-family:'Tajawal',sans-serif; font-weight:700; }
+  .price-cell{ font-family:'Tajawal',sans-serif; font-weight:700; display:flex; align-items:center; gap:4px;}
   .empty-state{
     text-align:center; padding:60px 20px; color:var(--ink-soft);
   }
   .empty-state .emoji{ font-size:40px; margin-bottom:10px; }
-  .empty-state h3{ margin:0 0 6px; color:var(--ink); }
+  .empty-state .empty-state h3{ margin:0 0 6px; color:var(--ink); }
+
+  /* ===== Saudi Riyal New Logo (SAR) ===== */
+  .sar-logo {
+    height: 1.1em;
+    width: auto;
+    max-width: 20px;
+    vertical-align: middle;
+    display: inline-block;
+    object-fit: contain;
+  }
 
   /* ===== Modal ===== */
   .overlay{
@@ -287,7 +305,7 @@
   }
   .overlay.show{ display:flex; }
   .modal{
-    background:#fff; border-radius:16px; width:100%; max-width:480px;
+    background:#fff; border-radius:16px; width:100%; max-width:550px;
     box-shadow:0 20px 60px rgba(0,0,0,0.3);
     animation: pop .18s ease;
     margin-top:20px;
@@ -299,11 +317,11 @@
   }
   .modal-head h3{ margin:0; font-size:17px; font-weight:800; }
   .modal-close{ background:none; border:none; font-size:20px; cursor:pointer; color:var(--ink-soft); line-height:1; padding:4px; }
-  .modal-body{ padding:18px 20px; }
+  .modal-body{ padding:18px 20px; max-height:70vh; overflow-y:auto; }
   .modal-foot{ padding:14px 20px 20px; display:flex; gap:10px; }
   .modal-foot .btn{ flex:1; justify-content:center; }
   .field{ margin-bottom:14px; }
-  .field label{ display:block; font-size:13px; font-weight:700; margin-bottom:6px; color:var(--ink); }
+  .field label{ display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700; margin-bottom:6px; color:var(--ink); }
   .field .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
   .field input, .field select{
     width:100%; padding:10px 12px; border-radius:9px;
@@ -316,26 +334,143 @@
   .field-error{ color:var(--danger); font-size:12px; margin-top:4px; display:none; }
   .field.invalid input, .field.invalid select{ border-color:var(--danger); }
   .field.invalid .field-error{ display:block; }
+  .section-title { font-family:'Tajawal', sans-serif; font-size:15px; font-weight:800; color:var(--navy); margin: 20px 0 10px; border-bottom:1px solid var(--line); padding-bottom:5px;}
 
-  /* adjust modal specific */
-  .adjust-current{
-    background:var(--paper); border:1px dashed var(--line); border-radius:10px;
-    padding:12px; text-align:center; margin-bottom:16px;
+  /* ===== Label Designer ===== */
+  .label-templates{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:12px;
+    margin-bottom:20px;
   }
-  .adjust-current .num{ font-family:'Tajawal',sans-serif; font-weight:800; font-size:24px; color:var(--navy); }
-  .seg{
-    display:flex; border:1.5px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:14px;
+  .template-card{
+    border:2px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    cursor:pointer;
+    transition:all .2s ease;
+    background:var(--card);
   }
-  .seg button{
-    flex:1; padding:10px; border:none; background:var(--paper); cursor:pointer;
-    font-family:'IBM Plex Sans Arabic',sans-serif; font-weight:700; font-size:14px; color:var(--ink-soft);
+  .template-card:hover{ border-color:var(--gold); transform:translateY(-2px); box-shadow:var(--shadow); }
+  .template-card.selected{ border-color:var(--gold); background:var(--warn-bg); }
+  .template-card .template-name{ font-weight:700; margin-bottom:4px; color:var(--ink); }
+  .template-card .template-size{ font-size:11.5px; color:var(--ink-soft); }
+  .template-card .template-preview{
+    margin-top:8px;
+    padding:6px;
+    background:#fff;
+    border:1px dashed var(--line);
+    border-radius:6px;
+    text-align:center;
+    font-size:10px;
+    color:var(--ink-soft);
   }
-  .seg button.active.add{ background:var(--ok-bg); color:var(--ok); }
-  .seg button.active.sub{ background:var(--danger-bg); color:var(--danger); }
-  .adjust-preview{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:-4px; margin-bottom:14px; }
-  .adjust-preview b{ color:var(--ink); }
 
-  .backup-row{ display:flex; gap:10px; }
+  /* ===== Print Preview ===== */
+  .print-preview-area{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    min-height:300px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:15px;
+    align-content:flex-start;
+    justify-content:center;
+  }
+  
+  /* Label Styles */
+  .price-label{
+    background:#fff;
+    border:2px solid #000;
+    page-break-inside:avoid;
+    display:inline-flex; 
+    box-sizing: border-box; 
+    overflow:hidden;
+  }
+  .barcode-svg { 
+    width:100%; 
+    height:auto; 
+    object-fit: contain; 
+  }
+  
+  /* Template: Small Barcode Only */
+  .label-small-barcode{
+    width:50mm;
+    height:25mm;
+    padding:3mm;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+  .label-small-barcode .barcode-svg{ max-height:12mm; }
+  .label-small-barcode .label-sku{ font-size:9pt; font-weight:700; margin-top:2mm; font-family:'Courier New', monospace; }
+
+  /* Template: Standard Price Tag */
+  .label-standard{
+    width:60mm;
+    height:40mm;
+    padding:4mm;
+    flex-direction:column;
+  }
+  .label-standard .label-header{ text-align:center; border-bottom:2px solid #000; padding-bottom:2mm; margin-bottom:2mm; }
+  .label-standard .label-name{ font-family:'Tajawal', sans-serif; font-weight:800; font-size:12pt; margin-bottom:1mm; }
+  .label-standard .label-category{ font-size:8pt; color:#666; }
+  .label-standard .label-price-section{ text-align:center; margin:3mm 0; display:flex; justify-content:center; align-items:center; gap:6px; }
+  .label-standard .label-price{ font-family:'Tajawal', sans-serif; font-size:20pt; font-weight:800; color:#B8892B; }
+  .label-standard .label-currency{ font-size:12pt; display:flex; align-items:center; }
+  .label-standard .barcode-svg{ max-height:12mm; margin-top:auto; }
+
+  /* Template: Large Shelf Tag */
+  .label-large{
+    width:80mm;
+    height:60mm;
+    padding:5mm;
+    flex-direction:column;
+  }
+  .label-large .label-name{ font-family:'Tajawal', sans-serif; font-weight:800; font-size:16pt; margin-bottom:2mm; text-align:center; }
+  .label-large .label-category{ font-size:10pt; color:#666; text-align:center; margin-bottom:3mm; }
+  .label-large .label-price-section{ text-align:center; background:#F5F3ED; padding:4mm; margin:3mm 0; border-radius:4mm; display:flex; justify-content:center; align-items:center; gap:6px; }
+  .label-large .label-price{ font-family:'Tajawal', sans-serif; font-size:28pt; font-weight:800; color:#B8892B; }
+  .label-large .label-currency{ font-size:14pt; display:flex; align-items:center; }
+  .label-large .label-info{ display:flex; justify-content:space-between; font-size:9pt; margin:2mm 0; color:#666; }
+  .label-large .barcode-svg{ max-height:14mm; margin-top:auto; }
+
+  /* Template: Minimal Modern */
+  .label-minimal{
+    width:55mm;
+    height:35mm;
+    padding:3mm;
+    background:linear-gradient(135deg, #FFFFFF 0%, #F5F3ED 100%);
+    border:1px solid #000;
+    flex-direction:column;
+  }
+  .label-minimal .label-name{ font-family:'Tajawal', sans-serif; font-weight:700; font-size:11pt; margin-bottom:2mm; }
+  .label-minimal .label-price-row{ display:flex; justify-content:space-between; align-items:center; margin:2mm 0; }
+  .label-minimal .label-price{ font-family:'Tajawal', sans-serif; font-size:18pt; font-weight:800; color:#10233F; display:flex; align-items:center; gap:4px; }
+  .label-minimal .label-sku{ font-size:8pt; color:#666; font-family:monospace; }
+  .label-minimal .barcode-svg{ max-height:11mm; margin-top:auto; }
+
+  /* Template: Promotional */
+  .label-promo{
+    width:70mm;
+    height:50mm;
+    padding:0;
+    background:#B8892B;
+    color:#fff;
+    border:3px solid #10233F;
+    flex-direction:column;
+  }
+  .label-promo .promo-header{ background:#10233F; padding:2mm; text-align:center; }
+  .label-promo .promo-badge{ font-family:'Tajawal', sans-serif; font-weight:800; font-size:10pt; }
+  .label-promo .label-name{ font-family:'Tajawal', sans-serif; font-weight:800; font-size:13pt; padding:3mm; text-align:center; }
+  .label-promo .label-price-section{ background:#fff; color:#B8892B; padding:4mm; margin:2mm 3mm; text-align:center; border-radius:3mm; display:flex; justify-content:center; align-items:center; gap:6px;}
+  .label-promo .label-price{ font-family:'Tajawal', sans-serif; font-size:24pt; font-weight:800; }
+  .label-promo .label-currency { font-size:12pt; display:flex; align-items:center; gap:4px;}
+  .label-promo .barcode-section{ background:#fff; padding:2mm 3mm; margin:auto 3mm 3mm; }
+  .label-promo .barcode-svg{ max-height:12mm; }
 
   /* ===== Toast ===== */
   #toast{
@@ -362,10 +497,8 @@
   .item-card-grid .lbl{ color:var(--ink-soft); font-size:11px; }
   .item-card-actions{ display:flex; gap:8px; }
   .item-card-actions .btn{ flex:1; justify-content:center; }
+  .mobile-price { display:inline-flex; align-items:center; gap:4px; }
 
-  @media (max-width: 980px){
-    .stats{ grid-template-columns:repeat(2,1fr); }
-  }
   @media (max-width: 760px){
     .table-card{ display:none; }
     .mobile-cards{ display:block; }
@@ -373,31 +506,63 @@
     .brand-text h1{ font-size:16px; }
     .brand-text p{ display:none; }
     .wrap{ padding:14px 12px 50px; }
-  }
-  @media (max-width: 480px){
-    .stats{ grid-template-columns:1fr 1fr; }
-    .stat-card .stat-value{ font-size:21px; }
-    .toolbar{ flex-direction:column; align-items:stretch; }
-    .toolbar > *{ width:100%; }
+    .field-row { flex-direction: column; gap:0; }
+    .label-templates{ grid-template-columns:1fr; }
   }
 
-  /* ===== Print ===== */
-  .print-header{ display:none; }
+  /* ===== Print Rules: Separated for Report vs Labels ===== */
   @media print{
-    body{ background:#fff; }
-    .topbar, .toolbar, .alert-banner, .row-actions, thead th:last-child, tbody td:last-child, .overlay, #toast, .mobile-cards{ display:none !important; }
-    .table-card{ display:block !important; box-shadow:none; border:none; }
-    .wrap{ padding:0; max-width:100%; }
-    .print-header{
-      display:block; text-align:center; margin-bottom:16px; font-family:'Tajawal',sans-serif;
+    body{ background:#fff; margin:0; padding:0; }
+    
+    /* عناصر مخفية دائماً عند أي طباعة */
+    .topbar, .toolbar, .alert-banner, .row-actions, thead th:last-child, tbody td:last-child, 
+    #toast, .mobile-cards, #printLabelsBtn, .modal-head, .modal-foot, .label-templates,
+    .section-title, .field { display:none !important; }
+
+    /* === 1. وضع طباعة تقرير المنتجات === */
+    body.print-report .overlay { display: none !important; }
+    body.print-report .table-card { box-shadow: none; border: 1px solid #000; display: block !important; }
+    body.print-report .stats { page-break-inside: avoid; }
+    
+    /* === 2. وضع طباعة بطاقات الباركود === */
+    body.print-labels .wrap { display: none !important; } /* إخفاء الجدول الأساسي */
+    body.print-labels #itemOverlay, 
+    body.print-labels #adjustOverlay, 
+    body.print-labels #deleteOverlay { display: none !important; }
+    
+    body.print-labels #labelOverlay { 
+      display: block !important; 
+      position: static; 
+      background: none; 
+      backdrop-filter: none; 
+      padding: 0; 
     }
-    .print-header h2{ margin:0 0 4px; }
-    .print-header p{ margin:0; color:#555; font-size:12px; }
-    table{ min-width:0; }
-    thead th{ background:#eee !important; color:#111 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    tr.row-low, tr.row-out{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .stats{ margin-bottom:14px; }
-    .stat-card{ box-shadow:none; break-inside:avoid; }
+    body.print-labels .modal { 
+      box-shadow: none; 
+      border: none; 
+      max-width: 100%; 
+      margin: 0; 
+      animation: none; 
+    }
+    body.print-labels .modal-body { 
+      padding: 0; 
+      max-height: none; 
+      overflow: visible; 
+    }
+    body.print-labels .print-preview-area { 
+      background: #fff; 
+      border: none; 
+      padding: 0; 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 15px; 
+      justify-content: flex-start;
+      align-content: flex-start;
+    }
+    body.print-labels .price-label { 
+      margin: 0; 
+      page-break-inside: avoid; 
+    }
   }
 </style>
 </head>
@@ -422,16 +587,10 @@
 </div>
 
 <div class="wrap">
-
-  <div class="print-header">
-    <h2>تقرير المخزون — نظام إدارة المخزون</h2>
-    <p id="printDate"></p>
-  </div>
-
   <div class="alert-banner" id="alertBanner">
     <span class="icon">⚠️</span>
-    <span><strong id="alertCount">0</strong> سلعة بحاجة إلى إعادة تخزين قريبًا.</span>
-    <button id="alertShowBtn">عرض السلع المنخفضة</button>
+    <span><strong id="alertCount">0</strong> سلعة بحاجة للانتباه (كمية منخفضة أو مشارفة على الانتهاء).</span>
+    <button id="alertShowBtn">عرض السلع</button>
   </div>
 
   <div class="stats">
@@ -443,7 +602,7 @@
     <div class="stat-card tag-value">
       <div class="stat-label">القيمة الإجمالية للمخزون</div>
       <div class="stat-value" id="statValue">0</div>
-      <div class="stat-note">ريال سعودي</div>
+      <div class="stat-note"><img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"></div>
     </div>
     <div class="stat-card tag-low">
       <div class="stat-label">سلع منخفضة الكمية</div>
@@ -455,6 +614,11 @@
       <div class="stat-value" id="statOut">0</div>
       <div class="stat-note">الكمية = صفر</div>
     </div>
+    <div class="stat-card tag-exp">
+      <div class="stat-label">سلع منتهية أو قاربت</div>
+      <div class="stat-value" id="statExp">0</div>
+      <div class="stat-note">خلال 30 يوم</div>
+    </div>
   </div>
 
   <div class="toolbar">
@@ -465,7 +629,9 @@
     <select class="filter-select" id="categoryFilter">
       <option value="">كل الفئات</option>
     </select>
-    <div class="toggle-chip" id="lowOnlyToggle">⚠️ عرض المنخفض فقط</div>
+    <div class="toggle-chip" id="lowOnlyToggle">⚠️ عرض المنخفض والمنتهي فقط</div>
+    <!-- زر تحديد الكل الجديد -->
+    <div class="toggle-chip" id="btnSelectAllToggle" style="color:var(--navy); border-color:var(--navy);">☑️ تحديد جميع السلع</div>
     <div class="toolbar-spacer"></div>
     <span style="font-size:12.5px; color:var(--ink-soft);" id="resultCount"></span>
   </div>
@@ -475,12 +641,14 @@
       <table>
         <thead>
           <tr>
+            <th><input type="checkbox" id="selectAll" title="تحديد الكل"></th>
             <th>الباركود / SKU</th>
             <th>اسم السلعة</th>
             <th>الفئة</th>
+            <th>تاريخ الصلاحية</th>
+            <th>المورد</th>
             <th>الكمية</th>
             <th>سعر الوحدة</th>
-            <th>القيمة الإجمالية</th>
             <th>الحالة</th>
             <th>إجراءات</th>
           </tr>
@@ -497,6 +665,12 @@
 
   <div class="mobile-cards" id="mobileCards"></div>
 
+  <!-- زر طباعة الباركود للسلع المحددة -->
+  <div style="position:fixed; bottom:20px; right:20px; z-index:50;" id="printLabelsBtn" hidden>
+    <button class="btn btn-gold" style="box-shadow:0 4px 20px rgba(0,0,0,0.2);" id="openLabelDesigner">
+      🏷️ طباعة بطاقات السلع المحددة (<span id="selectedCount">0</span>)
+    </button>
+  </div>
 </div>
 
 <!-- Add/Edit Item Modal -->
@@ -516,7 +690,7 @@
       <div class="field-row">
         <div class="field" id="f_sku">
           <label>الباركود / SKU *</label>
-          <input type="text" id="f_sku_input" placeholder="مثال: 6281041" style="direction:ltr; text-align:left;">
+          <input type="text" id="f_sku_input" placeholder="مثال: 6281041000456" style="direction:ltr; text-align:left;">
           <div class="field-error">الرجاء إدخال رمز فريد</div>
         </div>
         <div class="field" id="f_category">
@@ -526,6 +700,8 @@
           <div class="field-error">الرجاء اختيار أو كتابة فئة</div>
         </div>
       </div>
+      
+      <div class="section-title">الكميات والأسعار</div>
       <div class="field-row">
         <div class="field" id="f_qty">
           <label>الكمية الحالية *</label>
@@ -533,7 +709,7 @@
           <div class="field-error">أدخل كمية صحيحة (0 أو أكثر)</div>
         </div>
         <div class="field" id="f_price">
-          <label>سعر الوحدة (ريال) *</label>
+          <label>سعر الوحدة (<img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'">) *</label>
           <input type="number" id="f_price_input" min="0" step="0.01" placeholder="0.00">
           <div class="field-error">أدخل سعرًا صحيحًا</div>
         </div>
@@ -541,7 +717,22 @@
       <div class="field" id="f_min">
         <label>حد التنبيه للمخزون المنخفض</label>
         <input type="number" id="f_min_input" min="0" placeholder="10">
-        <div class="hint">عند وصول الكمية إلى هذا الحد أو أقل، سيظهر تنبيه إعادة التخزين.</div>
+      </div>
+
+      <div class="section-title">الصلاحية والمورد</div>
+      <div class="field" id="f_expiry">
+        <label>تاريخ انتهاء الصلاحية</label>
+        <input type="date" id="f_expiry_input">
+      </div>
+      <div class="field-row">
+        <div class="field" id="f_supplier_name">
+          <label>اسم المورد/الشركة</label>
+          <input type="text" id="f_supplier_name_input" placeholder="مثال: شركة المراعي">
+        </div>
+        <div class="field" id="f_supplier_contact">
+          <label>رقم تواصل المورد</label>
+          <input type="text" id="f_supplier_contact_input" placeholder="مثال: 0500000000">
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -551,49 +742,87 @@
   </div>
 </div>
 
-<!-- Adjust Quantity Modal -->
+<!-- Label Designer Modal -->
+<div class="overlay" id="labelOverlay">
+  <div class="modal" style="max-width:900px;">
+    <div class="modal-head">
+      <h3>🏷️ تصميم وطباعة بطاقات الأسعار والباركود</h3>
+      <button class="modal-close" id="closeLabelModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="section-title">اختر نموذج البطاقة</div>
+      <div class="label-templates">
+        <div class="template-card" data-template="small-barcode">
+          <div class="template-name">باركود صغير فقط</div>
+          <div class="template-size">50×25 ملم</div>
+          <div class="template-preview">باركود بسيط</div>
+        </div>
+        <div class="template-card selected" data-template="standard">
+          <div class="template-name">بطاقة قياسية</div>
+          <div class="template-size">60×40 ملم</div>
+          <div class="template-preview">اسم + سعر + باركود</div>
+        </div>
+        <div class="template-card" data-template="large">
+          <div class="template-name">بطاقة رف كبيرة</div>
+          <div class="template-size">80×60 ملم</div>
+          <div class="template-preview">معلومات كاملة</div>
+        </div>
+        <div class="template-card" data-template="minimal">
+          <div class="template-name">عصري مبسّط</div>
+          <div class="template-size">55×35 ملم</div>
+          <div class="template-preview">تصميم أنيق</div>
+        </div>
+        <div class="template-card" data-template="promo">
+          <div class="template-name">ترويجي ملوّن</div>
+          <div class="template-size">70×50 ملم</div>
+          <div class="template-preview">عرض خاص</div>
+        </div>
+      </div>
+
+      <div class="section-title">معاينة البطاقات (<span id="previewCount">0</span> بطاقة)</div>
+      <div class="print-preview-area" id="printPreviewArea">
+        <!-- سيتم إنشاء البطاقات هنا -->
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" id="cancelLabelModal">إلغاء</button>
+      <button class="btn btn-gold" id="printLabelsConfirm">🖨️ طباعة البطاقات</button>
+    </div>
+  </div>
+</div>
+
+<!-- Adjust Modal -->
 <div class="overlay" id="adjustOverlay">
-  <div class="modal">
+  <div class="modal" style="max-width:400px;">
     <div class="modal-head">
       <h3>تحديث الكمية</h3>
       <button class="modal-close" id="closeAdjustModal">✕</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="adjustItemId">
-      <div class="adjust-current">
-        <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:4px;" id="adjustItemName">السلعة</div>
-        <div class="num"><span id="adjustCurrentQty">0</span> قطعة/وحدة</div>
-      </div>
-      <div class="seg">
-        <button type="button" class="add active" id="segAdd">➕ إضافة كمية</button>
-        <button type="button" class="sub" id="segSub">➖ طرح كمية</button>
-      </div>
       <div class="field">
-        <label>الكمية</label>
-        <input type="number" id="adjustAmount" min="1" placeholder="أدخل الكمية">
+        <label>الكمية الجديدة/المضافة</label>
+        <input type="number" id="adjustAmount" min="0" placeholder="أدخل الكمية">
       </div>
-      <div class="adjust-preview">الكمية الجديدة ستكون: <b id="adjustPreview">0</b></div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-outline" id="cancelAdjustModal">إلغاء</button>
-      <button class="btn btn-gold" id="confirmAdjustBtn">تأكيد التحديث</button>
+      <button class="btn btn-gold" id="confirmAdjustBtn" style="width:100%">تأكيد</button>
     </div>
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
+<!-- Delete Modal -->
 <div class="overlay" id="deleteOverlay">
-  <div class="modal">
+  <div class="modal" style="max-width:400px;">
     <div class="modal-head">
       <h3>حذف السلعة</h3>
       <button class="modal-close" id="closeDeleteModal">✕</button>
     </div>
     <div class="modal-body">
-      <p style="margin:0;">هل أنت متأكد من حذف <strong id="deleteItemName"></strong> نهائيًا من المخزون؟ لا يمكن التراجع عن هذا الإجراء.</p>
+      <p style="margin:0;">هل أنت متأكد من حذف هذه السلعة نهائيًا؟</p>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-outline" id="cancelDeleteModal">إلغاء</button>
-      <button class="btn" style="background:var(--danger); color:#fff;" id="confirmDeleteBtn">🗑️ حذف نهائيًا</button>
+      <button class="btn" style="background:var(--danger); color:#fff; width:100%;" id="confirmDeleteBtn">🗑️ حذف</button>
     </div>
   </div>
 </div>
@@ -604,59 +833,56 @@
 (function(){
   "use strict";
 
-  const STORAGE_KEY = "supermarket_inventory_v1";
+  const STORAGE_KEY = "supermarket_inventory_v2";
   const DEFAULT_CATEGORIES = ["مواد غذائية","ألبان وأجبان","خضروات وفواكه","مشروبات","منظفات","عناية شخصية","مخبوزات","مجمدات","لحوم ودواجن","أخرى"];
 
   let items = [];
-  let state = {
-    search: "",
-    category: "",
-    lowOnly: false
-  };
+  let state = { search: "", category: "", lowOnly: false };
+  let selectedItems = new Set();
+  let currentLabelTemplate = "standard";
 
-  // ---------- Storage ----------
   function loadData(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       items = raw ? JSON.parse(raw) : [];
-    }catch(e){
-      console.error("تعذر قراءة البيانات المحفوظة", e);
-      items = [];
-    }
+    }catch(e){ items = []; }
   }
   function saveData(){
-    try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }catch(e){
-      showToast("تعذر حفظ البيانات — تحقق من مساحة التخزين في المتصفح");
-    }
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    catch(e){ showToast("تعذر حفظ البيانات"); }
   }
 
-  // ---------- Helpers ----------
   function uid(){ return "itm_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-  function fmtMoney(n){
-    return Number(n).toLocaleString('ar-SA', {minimumFractionDigits:2, maximumFractionDigits:2});
-  }
+  function fmtMoney(n){ return Number(n).toLocaleString('ar-SA', {minimumFractionDigits:2, maximumFractionDigits:2}); }
   function fmtNum(n){ return Number(n).toLocaleString('ar-SA'); }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  
   function statusOf(item){
     const min = Number(item.minQty) || 0;
     if(Number(item.qty) <= 0) return "out";
     if(Number(item.qty) <= min) return "low";
     return "ok";
   }
+
+  function expiryStatusOf(item){
+    if(!item.expiryDate) return "ok";
+    const exp = new Date(item.expiryDate);
+    const now = new Date();
+    const diffTime = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+    
+    if (diffTime < 0) return "expired";
+    if (diffTime <= 30) return "expiring_soon";
+    return "ok";
+  }
+
   let toastTimer;
   function showToast(msg){
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
+    t.textContent = msg; t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(()=> t.classList.remove('show'), 2600);
   }
 
-  // ---------- Category list ----------
   function getAllCategories(){
     const set = new Set(DEFAULT_CATEGORIES);
     items.forEach(i => { if(i.category) set.add(i.category); });
@@ -668,41 +894,42 @@
     const currentFilterVal = filterSel.value;
     filterSel.innerHTML = '<option value="">كل الفئات</option>' + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     filterSel.value = cats.includes(currentFilterVal) ? currentFilterVal : "";
-
-    const datalist = document.getElementById('categoryList');
-    datalist.innerHTML = cats.map(c=>`<option value="${escapeHtml(c)}">`).join('');
+    document.getElementById('categoryList').innerHTML = cats.map(c=>`<option value="${escapeHtml(c)}">`).join('');
   }
 
-  // ---------- Filtering ----------
   function getFiltered(){
     const q = state.search.trim().toLowerCase();
     return items.filter(it=>{
       if(state.category && it.category !== state.category) return false;
       if(state.lowOnly){
         const st = statusOf(it);
-        if(st !== 'low' && st !== 'out') return false;
+        const expSt = expiryStatusOf(it);
+        if(st !== 'low' && st !== 'out' && expSt !== 'expired' && expSt !== 'expiring_soon') return false;
       }
       if(q){
-        const hay = (it.name + " " + it.sku).toLowerCase();
+        const hay = (it.name + " " + it.sku + " " + (it.supplierName||"")).toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
     });
   }
 
-  // ---------- Render ----------
   function renderStats(){
     document.getElementById('statTotal').textContent = fmtNum(items.length);
     document.getElementById('statCats').textContent = getAllCategories().filter(c=>items.some(i=>i.category===c)).length + " فئة نشِطة";
     const totalValue = items.reduce((sum,i)=> sum + (Number(i.qty)*Number(i.price)), 0);
     document.getElementById('statValue').textContent = fmtMoney(totalValue);
+    
     const lowCount = items.filter(i=> statusOf(i)==='low').length;
     const outCount = items.filter(i=> statusOf(i)==='out').length;
+    const expCount = items.filter(i=> ['expired', 'expiring_soon'].includes(expiryStatusOf(i))).length;
+    
     document.getElementById('statLow').textContent = fmtNum(lowCount);
     document.getElementById('statOut').textContent = fmtNum(outCount);
+    document.getElementById('statExp').textContent = fmtNum(expCount);
 
     const banner = document.getElementById('alertBanner');
-    const needsAttention = lowCount + outCount;
+    const needsAttention = lowCount + outCount + expCount;
     if(needsAttention > 0){
       banner.classList.add('show');
       document.getElementById('alertCount').textContent = fmtNum(needsAttention);
@@ -711,10 +938,25 @@
     }
   }
 
-  function statusBadge(st){
-    if(st==='out') return `<span class="status-badge status-out">⛔ نفدت الكمية</span>`;
-    if(st==='low') return `<span class="status-badge status-low">⚠️ منخفضة</span>`;
-    return `<span class="status-badge status-ok">✅ متوفرة</span>`;
+  function generateBadges(item){
+    let badges = '';
+    const st = statusOf(item);
+    const expSt = expiryStatusOf(item);
+
+    if(st==='out') badges += `<div class="status-badge status-out">⛔ نفدت الكمية</div>`;
+    else if(st==='low') badges += `<div class="status-badge status-low">⚠️ كمية منخفضة</div>`;
+    else badges += `<div class="status-badge status-ok">✅ متوفرة</div>`;
+
+    if(expSt==='expired') badges += `<div class="status-badge status-exp">❌ منتهية الصلاحية</div>`;
+    else if(expSt==='expiring_soon') badges += `<div class="status-badge status-exp-soon">⏳ قاربت على الانتهاء</div>`;
+
+    return badges;
+  }
+
+  function updateSelectedCount(){
+    const count = selectedItems.size;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('printLabelsBtn').hidden = count === 0;
   }
 
   function renderTable(){
@@ -724,27 +966,45 @@
     const emptyState = document.getElementById('emptyState');
     document.getElementById('resultCount').textContent = `عرض ${fmtNum(filtered.length)} من ${fmtNum(items.length)} سلعة`;
 
+    // تحديث حالة أزرار "تحديد الكل"
+    const isAllSelected = filtered.length > 0 && filtered.every(item => selectedItems.has(item.id));
+    const selectAllCb = document.getElementById('selectAll');
+    if (selectAllCb) selectAllCb.checked = isAllSelected;
+    
+    const btnSelectAllToggle = document.getElementById('btnSelectAllToggle');
+    if (btnSelectAllToggle) {
+      if (isAllSelected && filtered.length > 0) {
+        btnSelectAllToggle.innerHTML = '☐ إلغاء التحديد';
+        btnSelectAllToggle.style.backgroundColor = 'var(--warn-bg)';
+      } else {
+        btnSelectAllToggle.innerHTML = '☑️ تحديد جميع السلع';
+        btnSelectAllToggle.style.backgroundColor = 'var(--paper)';
+      }
+    }
+
     if(filtered.length === 0){
-      tbody.innerHTML = "";
-      mobileWrap.innerHTML = "";
-      emptyState.style.display = 'block';
-      return;
+      tbody.innerHTML = ""; mobileWrap.innerHTML = "";
+      emptyState.style.display = 'block'; return;
     }
     emptyState.style.display = 'none';
 
     tbody.innerHTML = filtered.map(item=>{
       const st = statusOf(item);
       const rowClass = st==='out' ? 'row-out' : (st==='low' ? 'row-low' : '');
-      const total = Number(item.qty)*Number(item.price);
+      const supplierHtml = item.supplierName ? `${escapeHtml(item.supplierName)}<br><small style="color:var(--ink-soft); direction:ltr; display:inline-block;">${escapeHtml(item.supplierContact)}</small>` : '-';
+      const checked = selectedItems.has(item.id) ? 'checked' : '';
+      
       return `
       <tr class="${rowClass}">
+        <td><input type="checkbox" class="item-checkbox" data-id="${item.id}" ${checked}></td>
         <td><span class="item-sku">${escapeHtml(item.sku)}</span></td>
         <td><span class="item-name">${escapeHtml(item.name)}</span></td>
         <td><span class="cat-pill">${escapeHtml(item.category)}</span></td>
+        <td style="direction:ltr; text-align:right;">${item.expiryDate ? escapeHtml(item.expiryDate) : '-'}</td>
+        <td>${supplierHtml}</td>
         <td><button class="qty-btn ${st==='low'?'low':''} ${st==='out'?'out':''}" data-action="adjust" data-id="${item.id}" title="تحديث الكمية">${fmtNum(item.qty)}</button></td>
-        <td class="price-cell">${fmtMoney(item.price)} ﷼</td>
-        <td class="price-cell">${fmtMoney(total)} ﷼</td>
-        <td>${statusBadge(st)}</td>
+        <td class="price-cell">${fmtMoney(item.price)} <img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"></td>
+        <td>${generateBadges(item)}</td>
         <td>
           <div class="row-actions">
             <button class="btn btn-outline btn-icon btn-sm" data-action="edit" data-id="${item.id}" title="تعديل">✏️</button>
@@ -757,21 +1017,22 @@
     mobileWrap.innerHTML = filtered.map(item=>{
       const st = statusOf(item);
       const rowClass = st==='out' ? 'row-out' : (st==='low' ? 'row-low' : '');
-      const total = Number(item.qty)*Number(item.price);
+      const checked = selectedItems.has(item.id) ? 'checked' : '';
       return `
       <div class="item-card ${rowClass}">
         <div class="item-card-top">
           <div>
+            <input type="checkbox" class="item-checkbox" data-id="${item.id}" ${checked}>
             <div class="item-name">${escapeHtml(item.name)}</div>
             <span class="item-sku">${escapeHtml(item.sku)}</span>
           </div>
-          ${statusBadge(st)}
         </div>
-        <div class="item-card-grid">
-          <div><div class="lbl">الفئة</div><span class="cat-pill">${escapeHtml(item.category)}</span></div>
+        <div>${generateBadges(item)}</div>
+        <div class="item-card-grid" style="margin-top:10px;">
           <div><div class="lbl">الكمية</div><b>${fmtNum(item.qty)}</b></div>
-          <div><div class="lbl">سعر الوحدة</div>${fmtMoney(item.price)} ﷼</div>
-          <div><div class="lbl">القيمة الإجمالية</div>${fmtMoney(total)} ﷼</div>
+          <div><div class="lbl">سعر الوحدة</div><span class="mobile-price">${fmtMoney(item.price)} <img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"></span></div>
+          <div><div class="lbl">تاريخ الانتهاء</div>${item.expiryDate || '-'}</div>
+          <div><div class="lbl">المورد</div>${escapeHtml(item.supplierName || '-')}</div>
         </div>
         <div class="item-card-actions">
           <button class="btn btn-outline btn-sm" data-action="adjust" data-id="${item.id}">🔁 الكمية</button>
@@ -780,15 +1041,47 @@
         </div>
       </div>`;
     }).join('');
+
+    // Event listeners for checkboxes
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+      cb.addEventListener('change', function(){
+        const id = this.getAttribute('data-id');
+        if(this.checked) selectedItems.add(id);
+        else selectedItems.delete(id);
+        updateSelectedCount();
+        renderTable(); // لإعادة التحقق من حالة زر تحديد الكل
+      });
+    });
   }
 
-  function renderAll(){
-    refreshCategoryOptions();
-    renderStats();
+  function renderAll(){ refreshCategoryOptions(); renderStats(); renderTable(); }
+
+  // Select All functionality (Desktop table header checkbox)
+  document.getElementById('selectAll').addEventListener('change', function(){
+    const filtered = getFiltered();
+    if(this.checked){
+      filtered.forEach(item => selectedItems.add(item.id));
+    } else {
+      filtered.forEach(item => selectedItems.delete(item.id));
+    }
+    updateSelectedCount();
     renderTable();
-  }
+  });
 
-  // ---------- Item Modal (Add/Edit) ----------
+  // Select All functionality (Toolbar button for mobile & bulk action)
+  document.getElementById('btnSelectAllToggle').addEventListener('click', function(){
+    const filtered = getFiltered();
+    const isAllSelected = filtered.length > 0 && filtered.every(item => selectedItems.has(item.id));
+    
+    if(isAllSelected){
+      filtered.forEach(item => selectedItems.delete(item.id));
+    } else {
+      filtered.forEach(item => selectedItems.add(item.id));
+    }
+    updateSelectedCount();
+    renderTable();
+  });
+
   const itemOverlay = document.getElementById('itemOverlay');
   function openAddModal(){
     document.getElementById('itemModalTitle').textContent = "إضافة سلعة جديدة";
@@ -799,9 +1092,11 @@
     document.getElementById('f_qty_input').value = "";
     document.getElementById('f_price_input').value = "";
     document.getElementById('f_min_input').value = "10";
+    document.getElementById('f_expiry_input').value = "";
+    document.getElementById('f_supplier_name_input').value = "";
+    document.getElementById('f_supplier_contact_input').value = "";
     clearFieldErrors();
     itemOverlay.classList.add('show');
-    setTimeout(()=> document.getElementById('f_name_input').focus(), 50);
   }
   function openEditModal(id){
     const item = items.find(i=>i.id===id);
@@ -814,13 +1109,14 @@
     document.getElementById('f_qty_input').value = item.qty;
     document.getElementById('f_price_input').value = item.price;
     document.getElementById('f_min_input').value = item.minQty;
+    document.getElementById('f_expiry_input').value = item.expiryDate || "";
+    document.getElementById('f_supplier_name_input').value = item.supplierName || "";
+    document.getElementById('f_supplier_contact_input').value = item.supplierContact || "";
     clearFieldErrors();
     itemOverlay.classList.add('show');
   }
   function closeItemModal(){ itemOverlay.classList.remove('show'); }
-  function clearFieldErrors(){
-    ['f_name','f_sku','f_category','f_qty','f_price'].forEach(id=> document.getElementById(id).classList.remove('invalid'));
-  }
+  function clearFieldErrors(){ ['f_name','f_sku','f_category','f_qty','f_price'].forEach(id=> document.getElementById(id).classList.remove('invalid')); }
   function markInvalid(id){ document.getElementById(id).classList.add('invalid'); }
 
   function saveItemFromForm(){
@@ -832,6 +1128,9 @@
     const qty = document.getElementById('f_qty_input').value;
     const price = document.getElementById('f_price_input').value;
     const minQty = document.getElementById('f_min_input').value;
+    const expiryDate = document.getElementById('f_expiry_input').value;
+    const supplierName = document.getElementById('f_supplier_name_input').value.trim();
+    const supplierContact = document.getElementById('f_supplier_contact_input').value.trim();
 
     let valid = true;
     if(!name){ markInvalid('f_name'); valid = false; }
@@ -840,175 +1139,198 @@
     if(qty === "" || isNaN(qty) || Number(qty) < 0){ markInvalid('f_qty'); valid = false; }
     if(price === "" || isNaN(price) || Number(price) < 0){ markInvalid('f_price'); valid = false; }
 
-    // duplicate SKU check (excluding current item when editing)
     const dupe = items.find(i => i.sku.toLowerCase() === sku.toLowerCase() && i.id !== id);
-    if(dupe){
-      markInvalid('f_sku');
-      document.querySelector('#f_sku .field-error').textContent = "هذا الباركود مستخدم بالفعل لسلعة أخرى";
-      valid = false;
-    } else {
-      document.querySelector('#f_sku .field-error').textContent = "الرجاء إدخال رمز فريد";
-    }
+    if(dupe){ markInvalid('f_sku'); document.querySelector('#f_sku .field-error').textContent = "هذا الباركود مستخدم بالفعل"; valid = false; }
 
     if(!valid) return;
 
     if(id){
       const item = items.find(i=>i.id===id);
       Object.assign(item, {
-        name, sku, category,
-        qty: Number(qty), price: Number(price),
-        minQty: minQty === "" ? 0 : Number(minQty),
-        updatedAt: Date.now()
+        name, sku, category, qty: Number(qty), price: Number(price), minQty: minQty === "" ? 0 : Number(minQty),
+        expiryDate, supplierName, supplierContact, updatedAt: Date.now()
       });
       showToast("✅ تم تحديث بيانات السلعة");
     } else {
       items.push({
-        id: uid(), name, sku, category,
-        qty: Number(qty), price: Number(price),
-        minQty: minQty === "" ? 0 : Number(minQty),
-        createdAt: Date.now(), updatedAt: Date.now()
+        id: uid(), name, sku, category, qty: Number(qty), price: Number(price), minQty: minQty === "" ? 0 : Number(minQty),
+        expiryDate, supplierName, supplierContact, createdAt: Date.now(), updatedAt: Date.now()
       });
       showToast("✅ تمت إضافة السلعة إلى المخزون");
     }
-    saveData();
-    closeItemModal();
-    renderAll();
+    saveData(); closeItemModal(); renderAll();
   }
 
-  // ---------- Adjust Quantity Modal ----------
+  // Adjust & Delete Modals
   const adjustOverlay = document.getElementById('adjustOverlay');
-  let adjustMode = 'add';
   function openAdjustModal(id){
-    const item = items.find(i=>i.id===id);
-    if(!item) return;
     document.getElementById('adjustItemId').value = id;
-    document.getElementById('adjustItemName').textContent = item.name + "  •  " + item.sku;
-    document.getElementById('adjustCurrentQty').textContent = fmtNum(item.qty);
     document.getElementById('adjustAmount').value = "";
-    setAdjustMode('add');
-    updateAdjustPreview();
     adjustOverlay.classList.add('show');
-    setTimeout(()=> document.getElementById('adjustAmount').focus(), 50);
   }
-  function setAdjustMode(mode){
-    adjustMode = mode;
-    document.getElementById('segAdd').classList.toggle('active', mode==='add');
-    document.getElementById('segSub').classList.toggle('active', mode==='sub');
-    updateAdjustPreview();
-  }
-  function updateAdjustPreview(){
+  document.getElementById('confirmAdjustBtn').addEventListener('click', ()=>{
     const id = document.getElementById('adjustItemId').value;
-    const item = items.find(i=>i.id===id);
-    if(!item) return;
-    const amt = Number(document.getElementById('adjustAmount').value) || 0;
-    let newQty = adjustMode === 'add' ? Number(item.qty) + amt : Number(item.qty) - amt;
-    if(newQty < 0) newQty = 0;
-    document.getElementById('adjustPreview').textContent = fmtNum(newQty);
-  }
-  function confirmAdjust(){
-    const id = document.getElementById('adjustItemId').value;
-    const item = items.find(i=>i.id===id);
-    if(!item) return;
     const amt = Number(document.getElementById('adjustAmount').value);
-    if(!amt || amt <= 0){
-      showToast("أدخل كمية صحيحة أكبر من صفر");
-      return;
-    }
-    let newQty = adjustMode === 'add' ? Number(item.qty) + amt : Number(item.qty) - amt;
-    if(newQty < 0) newQty = 0;
-    item.qty = newQty;
-    item.updatedAt = Date.now();
-    saveData();
-    adjustOverlay.classList.remove('show');
-    renderAll();
-    showToast(adjustMode==='add' ? "✅ تمت إضافة الكمية" : "✅ تم طرح الكمية");
-  }
+    const item = items.find(i=>i.id===id);
+    if(item && !isNaN(amt)){ item.qty = amt; saveData(); renderAll(); adjustOverlay.classList.remove('show'); showToast("تم تحديث الكمية"); }
+  });
 
-  // ---------- Delete Modal ----------
   const deleteOverlay = document.getElementById('deleteOverlay');
   let pendingDeleteId = null;
-  function openDeleteModal(id){
-    const item = items.find(i=>i.id===id);
-    if(!item) return;
-    pendingDeleteId = id;
-    document.getElementById('deleteItemName').textContent = item.name;
-    deleteOverlay.classList.add('show');
-  }
-  function confirmDelete(){
-    if(!pendingDeleteId) return;
+  function openDeleteModal(id){ pendingDeleteId = id; deleteOverlay.classList.add('show'); }
+  document.getElementById('confirmDeleteBtn').addEventListener('click', ()=>{
     items = items.filter(i=>i.id !== pendingDeleteId);
-    saveData();
-    pendingDeleteId = null;
-    deleteOverlay.classList.remove('show');
-    renderAll();
-    showToast("🗑️ تم حذف السلعة من المخزون");
+    selectedItems.delete(pendingDeleteId);
+    saveData(); deleteOverlay.classList.remove('show'); renderAll(); updateSelectedCount(); showToast("تم حذف السلعة");
+  });
+
+  // Label Designer
+  const labelOverlay = document.getElementById('labelOverlay');
+  
+  document.getElementById('openLabelDesigner').addEventListener('click', ()=>{
+    renderLabelPreview();
+    labelOverlay.classList.add('show');
+  });
+
+  document.getElementById('closeLabelModal').addEventListener('click', ()=> labelOverlay.classList.remove('show'));
+  document.getElementById('cancelLabelModal').addEventListener('click', ()=> labelOverlay.classList.remove('show'));
+
+  // Template selection
+  document.querySelectorAll('.template-card').forEach(card => {
+    card.addEventListener('click', function(){
+      document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      currentLabelTemplate = this.getAttribute('data-template');
+      renderLabelPreview();
+    });
+  });
+
+  function generateBarcodeSVG(sku){
+    const canvas = document.createElement('canvas');
+    try {
+      JsBarcode(canvas, sku, {
+        format: "CODE128",
+        width: 2,
+        height: 35, 
+        displayValue: false,
+        margin: 0
+      });
+      return canvas.toDataURL("image/png");
+    } catch(e) {
+      return "";
+    }
   }
 
-  // ---------- Backup / Restore ----------
-  function exportBackup(){
-    const blob = new Blob([JSON.stringify(items, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const d = new Date();
-    const stamp = d.toISOString().slice(0,10);
-    a.href = url;
-    a.download = `نسخة-احتياطية-المخزون-${stamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showToast("⇩ تم تنزيل النسخة الاحتياطية");
-  }
-  function importBackup(file){
-    const reader = new FileReader();
-    reader.onload = function(e){
-      try{
-        const data = JSON.parse(e.target.result);
-        if(!Array.isArray(data)) throw new Error("صيغة غير صحيحة");
-        const valid = data.every(d => d && typeof d.name === 'string' && typeof d.sku === 'string');
-        if(!valid) throw new Error("صيغة غير صحيحة");
-        items = data.map(d => ({
-          id: d.id || uid(),
-          name: d.name, sku: d.sku, category: d.category || "أخرى",
-          qty: Number(d.qty)||0, price: Number(d.price)||0, minQty: Number(d.minQty)||0,
-          createdAt: d.createdAt || Date.now(), updatedAt: Date.now()
-        }));
-        saveData();
-        renderAll();
-        showToast("✅ تم استيراد النسخة الاحتياطية بنجاح");
-      }catch(err){
-        showToast("❌ تعذر قراءة الملف — تأكد أنه نسخة احتياطية صحيحة");
+  function renderLabelPreview(){
+    const selectedItemsData = Array.from(selectedItems).map(id => items.find(i => i.id === id)).filter(Boolean);
+    const previewArea = document.getElementById('printPreviewArea');
+    document.getElementById('previewCount').textContent = selectedItemsData.length;
+
+    if(selectedItemsData.length === 0){
+      previewArea.innerHTML = '<div style="text-align:center; color:var(--ink-soft); padding:40px;">لم يتم تحديد أي سلع</div>';
+      return;
+    }
+
+    previewArea.innerHTML = selectedItemsData.map(item => {
+      const barcodeImg = generateBarcodeSVG(item.sku);
+      
+      switch(currentLabelTemplate){
+        case 'small-barcode':
+          return `
+            <div class="price-label label-small-barcode">
+              ${barcodeImg ? `<img src="${barcodeImg}" class="barcode-svg" alt="barcode">` : ''}
+              <div class="label-sku">${escapeHtml(item.sku)}</div>
+            </div>
+          `;
+        
+        case 'standard':
+          return `
+            <div class="price-label label-standard">
+              <div class="label-header">
+                <div class="label-name">${escapeHtml(item.name)}</div>
+                <div class="label-category">${escapeHtml(item.category)}</div>
+              </div>
+              <div class="label-price-section">
+                <span class="label-price">${fmtMoney(item.price)}</span>
+                <span class="label-currency"><img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"></span>
+              </div>
+              ${barcodeImg ? `<img src="${barcodeImg}" class="barcode-svg" alt="barcode">` : ''}
+            </div>
+          `;
+        
+        case 'large':
+          return `
+            <div class="price-label label-large">
+              <div class="label-name">${escapeHtml(item.name)}</div>
+              <div class="label-category">${escapeHtml(item.category)}</div>
+              <div class="label-price-section">
+                <span class="label-price">${fmtMoney(item.price)}</span>
+                <span class="label-currency"><img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"></span>
+              </div>
+              <div class="label-info">
+                <span>SKU: ${escapeHtml(item.sku)}</span>
+                <span>الكمية: ${fmtNum(item.qty)}</span>
+              </div>
+              ${barcodeImg ? `<img src="${barcodeImg}" class="barcode-svg" alt="barcode">` : ''}
+            </div>
+          `;
+        
+        case 'minimal':
+          return `
+            <div class="price-label label-minimal">
+              <div class="label-name">${escapeHtml(item.name)}</div>
+              <div class="label-price-row">
+                <span class="label-price">${fmtMoney(item.price)} <img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"></span>
+                <span class="label-sku">${escapeHtml(item.sku)}</span>
+              </div>
+              ${barcodeImg ? `<img src="${barcodeImg}" class="barcode-svg" alt="barcode">` : ''}
+            </div>
+          `;
+        
+        case 'promo':
+          return `
+            <div class="price-label label-promo">
+              <div class="promo-header">
+                <div class="promo-badge">⭐ عرض خاص</div>
+              </div>
+              <div class="label-name">${escapeHtml(item.name)}</div>
+              <div class="label-price-section">
+                <span class="label-price">${fmtMoney(item.price)}</span>
+                <span class="label-currency"><img src="814223.png" class="sar-logo" alt="ريال" onerror="this.outerHTML='ريال'"> فقط</span>
+              </div>
+              <div class="barcode-section">
+                ${barcodeImg ? `<img src="${barcodeImg}" class="barcode-svg" alt="barcode">` : ''}
+              </div>
+            </div>
+          `;
+        
+        default:
+          return '';
       }
-    };
-    reader.readAsText(file);
+    }).join('');
   }
 
-  // ---------- Clock ----------
-  function tickClock(){
-    const el = document.getElementById('clockDisplay');
-    const now = new Date();
-    el.textContent = now.toLocaleDateString('ar-SA-u-nu-latn', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) + " — " + now.toLocaleTimeString('ar-SA-u-nu-latn', {hour:'2-digit', minute:'2-digit'});
-  }
+  // أوامر الطباعة المفصولة (لحل مشكلة الصفحة البيضاء)
+  document.getElementById('btnPrint').addEventListener('click', ()=>{
+    document.body.classList.remove('print-labels');
+    document.body.classList.add('print-report');
+    window.print();
+  });
 
-  // ---------- Event wiring ----------
+  document.getElementById('printLabelsConfirm').addEventListener('click', ()=>{
+    document.body.classList.remove('print-report');
+    document.body.classList.add('print-labels');
+    window.print();
+  });
+
+  // Events
   document.getElementById('btnAddTop').addEventListener('click', openAddModal);
   document.getElementById('closeItemModal').addEventListener('click', closeItemModal);
   document.getElementById('cancelItemModal').addEventListener('click', closeItemModal);
   document.getElementById('saveItemBtn').addEventListener('click', saveItemFromForm);
-  itemOverlay.addEventListener('click', e=>{ if(e.target === itemOverlay) closeItemModal(); });
-
+  
   document.getElementById('closeAdjustModal').addEventListener('click', ()=> adjustOverlay.classList.remove('show'));
-  document.getElementById('cancelAdjustModal').addEventListener('click', ()=> adjustOverlay.classList.remove('show'));
-  document.getElementById('confirmAdjustBtn').addEventListener('click', confirmAdjust);
-  document.getElementById('segAdd').addEventListener('click', ()=> setAdjustMode('add'));
-  document.getElementById('segSub').addEventListener('click', ()=> setAdjustMode('sub'));
-  document.getElementById('adjustAmount').addEventListener('input', updateAdjustPreview);
-  adjustOverlay.addEventListener('click', e=>{ if(e.target === adjustOverlay) adjustOverlay.classList.remove('show'); });
-
   document.getElementById('closeDeleteModal').addEventListener('click', ()=> deleteOverlay.classList.remove('show'));
-  document.getElementById('cancelDeleteModal').addEventListener('click', ()=> deleteOverlay.classList.remove('show'));
-  document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
-  deleteOverlay.addEventListener('click', e=>{ if(e.target === deleteOverlay) deleteOverlay.classList.remove('show'); });
 
   document.getElementById('searchInput').addEventListener('input', e=>{ state.search = e.target.value; renderTable(); });
   document.getElementById('categoryFilter').addEventListener('change', e=>{ state.category = e.target.value; renderTable(); });
@@ -1018,32 +1340,51 @@
     renderTable();
   });
   document.getElementById('alertShowBtn').addEventListener('click', function(){
-    state.lowOnly = true;
-    document.getElementById('lowOnlyToggle').classList.add('active');
-    renderTable();
-    document.querySelector('.toolbar').scrollIntoView({behavior:'smooth', block:'center'});
+    state.lowOnly = true; document.getElementById('lowOnlyToggle').classList.add('active'); renderTable();
   });
 
-  document.getElementById('btnPrint').addEventListener('click', function(){
-    document.getElementById('printDate').textContent = "تاريخ الطباعة: " + new Date().toLocaleDateString('ar-SA-u-nu-latn', {year:'numeric', month:'long', day:'numeric'});
-    window.print();
+  // Backup & Restore
+  document.getElementById('btnBackup').addEventListener('click', ()=>{
+    const data = JSON.stringify(items, null, 2);
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `inventory_backup_${Date.now()}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast("✅ تم تحميل النسخة الاحتياطية");
   });
 
-  document.getElementById('btnBackup').addEventListener('click', exportBackup);
-  document.getElementById('btnRestore').addEventListener('click', ()=> document.getElementById('restoreFile').click());
+  document.getElementById('btnRestore').addEventListener('click', ()=>{
+    document.getElementById('restoreFile').click();
+  });
+
   document.getElementById('restoreFile').addEventListener('change', function(e){
-    if(e.target.files && e.target.files[0]){
-      importBackup(e.target.files[0]);
-      e.target.value = "";
-    }
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(Array.isArray(data)){
+          items = data;
+          saveData();
+          renderAll();
+          showToast("✅ تم استعادة البيانات بنجاح");
+        } else {
+          showToast("❌ ملف غير صالح");
+        }
+      }catch(err){
+        showToast("❌ خطأ في قراءة الملف");
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
   });
 
-  // delegated table/card actions
   function handleActionClick(e){
     const btn = e.target.closest('[data-action]');
     if(!btn) return;
-    const id = btn.getAttribute('data-id');
-    const action = btn.getAttribute('data-action');
+    const id = btn.getAttribute('data-id'), action = btn.getAttribute('data-action');
     if(action === 'adjust') openAdjustModal(id);
     else if(action === 'edit') openEditModal(id);
     else if(action === 'delete') openDeleteModal(id);
@@ -1051,33 +1392,21 @@
   document.getElementById('tableBody').addEventListener('click', handleActionClick);
   document.getElementById('mobileCards').addEventListener('click', handleActionClick);
 
-  // Enter key submits item form
-  document.getElementById('itemOverlay').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ e.preventDefault(); saveItemFromForm(); }
-  });
-  document.getElementById('adjustAmount').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ e.preventDefault(); confirmAdjust(); }
-  });
-
-  // ---------- Seed sample data on first run ----------
   function seedIfEmpty(){
     if(items.length > 0) return;
+    const today = new Date();
+    const soon = new Date(); soon.setDate(today.getDate() + 15);
+    const expired = new Date(); expired.setDate(today.getDate() - 5);
+    
     items = [
-      {id:uid(), name:"أرز بسمتي 5 كجم", sku:"6281041000123", category:"مواد غذائية", qty:42, price:38.5, minQty:10, createdAt:Date.now(), updatedAt:Date.now()},
-      {id:uid(), name:"حليب طازج 1 لتر", sku:"6281041000456", category:"ألبان وأجبان", qty:8, price:6.75, minQty:15, createdAt:Date.now(), updatedAt:Date.now()},
-      {id:uid(), name:"مياه معدنية 1.5 لتر (كرتون)", sku:"6281041000789", category:"مشروبات", qty:0, price:12, minQty:5, createdAt:Date.now(), updatedAt:Date.now()},
-      {id:uid(), name:"صابون سائل لغسل الأطباق", sku:"6281041000999", category:"منظفات", qty:25, price:9.9, minQty:8, createdAt:Date.now(), updatedAt:Date.now()},
+      {id:uid(), name:"حليب طازج 1 لتر", sku:"6281041000456", category:"ألبان وأجبان", qty:8, price:6.75, minQty:15, expiryDate: soon.toISOString().split('T')[0], supplierName:"شركة المراعي", supplierContact:"920000000", createdAt:Date.now(), updatedAt:Date.now()},
+      {id:uid(), name:"خبز توست", sku:"6281041000411", category:"مخبوزات", qty:12, price:4, minQty:10, expiryDate: expired.toISOString().split('T')[0], supplierName:"مخابز لوزين", supplierContact:"", createdAt:Date.now(), updatedAt:Date.now()},
+      {id:uid(), name:"عصير برتقال 1 لتر", sku:"6281041000789", category:"مشروبات", qty:25, price:8.50, minQty:10, expiryDate: "", supplierName:"الراجحي", supplierContact:"0555555555", createdAt:Date.now(), updatedAt:Date.now()}
     ];
     saveData();
   }
 
-  // ---------- Init ----------
-  loadData();
-  seedIfEmpty();
-  renderAll();
-  tickClock();
-  setInterval(tickClock, 30000);
-
+  loadData(); seedIfEmpty(); renderAll(); updateSelectedCount();
 })();
 </script>
 </body>
